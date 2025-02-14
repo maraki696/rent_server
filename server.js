@@ -164,49 +164,28 @@ app.post("/approve_payment",async (req, res) => {
 });
 
 
-app.post("/admin/login", async (req, res) => {
-  try {
-    await checkAndUpdatePaymentStatus(); 
 
+     app.post("/admin/login", async (req, res) => {
+    await checkAndUpdatePaymentStatus();
     const { username, password } = req.body;
-    console.log("Login Attempt - Username:", username, "Password:", password);
-
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
-    }
-
     const sql = "SELECT * FROM admins WHERE username = ?";
-    db.query(sql, [username], async (err, result) => {
-      if (err) {
-        console.error("Database Error:", err);
-        return res.status(500).json({ message: "Database error", error: err });
-      }
 
-      if (result.length === 0) {
-        console.log("Invalid Username");
-        return res.status(401).json({ message: "Invalid username or password" });
-      }
+    db.query(sql, [username], (err, result) => {
+        if (err) return res.status(500).json({ message: "Database error", error: err });
 
-      const admin = result[0];
-      console.log("Database Admin Record:", admin);
+        if (result.length === 0) {
+            return res.status(401).json({ message: "Invalid username or password" });
+        }
 
-      // Debugging bcrypt comparison
-      console.log("Hashed Password from DB:", admin.password);
+        const admin = result[0];
 
-      const isMatch = await bcrypt.compare(password, admin.password);
-      console.log("Password Match Result:", isMatch);
-
-      if (isMatch) {
-        res.json({ success: true, admin });
-      } else {
-        console.log("Invalid Password");
-        res.status(401).json({ message: "Invalid username or password" });
-      }
+        // No bcrypt, just compare the password directly
+        if (password === admin.password) {
+            res.json({ success: true, admin });
+        } else {
+            res.status(401).json({ message: "Invalid username or password" });
+        }
     });
-  } catch (error) {
-    console.error("Server Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
 });
 
 
