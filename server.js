@@ -1,19 +1,14 @@
 const express = require("express");
-const mysql = require("mysql2/promise"); 
+const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
-const cors = require('cors');
-app.use(cors({ origin: '*' }));
-
 
 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-
 
 const db = mysql.createConnection({
   host: process.env.DB_HOST,        
@@ -26,26 +21,19 @@ const db = mysql.createConnection({
 db.connect((err) => {
   if (err) {
     console.error('Error connecting to the database:', err);
-      
   } else {
     console.log('Connected to the database');
   }
 });
 
 
+
+
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cors());
 app.use(express.json());
 
-app.get("/check-env", (req, res) => {
-  res.json({
-    DB_HOST: process.env.DB_HOST,
-    DB_USER: process.env.DB_USER,
-    DB_PASSWORD: process.env.DB_PASSWORD ? "HIDDEN" : "MISSING",
-    DB_NAME: process.env.DB_NAME,
-    DB_PORT: process.env.DB_PORT,
-  });
-});
 
 
 
