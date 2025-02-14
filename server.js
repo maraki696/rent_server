@@ -5,11 +5,11 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 
-app.use(cors());
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+app.use(cors());
 const db = mysql.createConnection({
   host: process.env.DB_HOST,        
   user: process.env.DB_USER,       
