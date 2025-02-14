@@ -4,7 +4,9 @@ const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
-const cron = require("node-cron");
+const cors = require('cors');
+app.use(cors({ origin: '*' }));
+
 
 
 
