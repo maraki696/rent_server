@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise"); 
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
@@ -15,8 +15,6 @@ const PORT = process.env.PORT || 5000;
 
 
 
-
-
 const db = mysql.createConnection({
   host: process.env.DB_HOST,        
   user: process.env.DB_USER,       
@@ -28,15 +26,11 @@ const db = mysql.createConnection({
 db.connect((err) => {
   if (err) {
     console.error('Error connecting to the database:', err);
+      
   } else {
     console.log('Connected to the database');
   }
 });
-
-
-
-
-
 
 
 app.use(express.static(path.join(__dirname, "public")));
