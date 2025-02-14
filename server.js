@@ -12,11 +12,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,        
+  host: "mysql-production-1be3.up.railway.app",       
   user: process.env.DB_USER,       
   password: process.env.DB_PASSWORD,  
   database: process.env.DB_NAME,    
-  port: process.env.DB_PORT || 53032  
+  port: 3306,  
 });
 
 db.connect((err) => {
