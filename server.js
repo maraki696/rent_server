@@ -165,28 +165,30 @@ app.post("/approve_payment",async (req, res) => {
 
 
 
-     app.post("/admin/login", async (req, res) => {
-    await checkAndUpdatePaymentStatus();
-    const { username, password } = req.body;
-    const sql = "SELECT * FROM admins WHERE username = ?";
+app.post("/admin/login", async (req, res) => {
+ await checkAndUpdatePaymentStatus();
+  const { username, password } = req.body;
+  const sql = "SELECT * FROM admins WHERE username = ?";
 
-    db.query(sql, [username], (err, result) => {
-        if (err) return res.status(500).json({ message: "Database error", error: err });
+  db.query(sql, [username], async (err, result) => {
+    if (err) return res.status(500).json({ message: "Database error", error: err });
 
-        if (result.length === 0) {
-            return res.status(401).json({ message: "Invalid username or password" });
-        }
+    if (result.length === 0) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
 
-        const admin = result[0];
+    const admin = result[0];
 
-        // No bcrypt, just compare the password directly
-        if (password === admin.password) {
-            res.json({ success: true, admin });
-        } else {
-            res.status(401).json({ message: "Invalid username or password" });
-        }
-    });
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (isMatch) {
+      res.json({ success: true, admin });
+    } else {
+      res.status(401).json({ message: "Invalid username or password" });
+    }
+  });
 });
+
+
 
 
 
