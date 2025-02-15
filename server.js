@@ -4,8 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
-const cron = require("node-cron");
-const serverless = require("serverless-http");
+
 
 
 const app = express();
@@ -455,7 +454,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-module.exports = app;   
-module.exports.handler = serverless(app);
+
 
 
