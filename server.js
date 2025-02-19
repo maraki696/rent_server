@@ -5,6 +5,11 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
+// require('./cronJob');
+
+
+
+
 
 
 const app = express();
@@ -119,17 +124,22 @@ app.put("/edit_customer/:customer_id", (req, res) => {
 
 
 
+app.delete("/delete/:customer_id", (req, res) => {
+  const id = req.params.customer_id; // Fix: Correct parameter reference
+  const sql = "DELETE FROM customers WHERE customer_id = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error('Error deleting customer:', err.response?.data || err);
 
-app.delete("/delete/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "DELETE FROM customers WHERE customer_id=?";
-  const values = [id];
-  db.query(sql, values, (err, result) => {
-    if (err)
-      return res.json({ message: "Something unexpected has occured" + err });
-    return res.json({ success: "Csutomer updated successfully" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    return res.json({ success: "Customer deleted successfully" });
   });
 });
+
+
 
 
 app.post("/approve_payment",async (req, res) => {
@@ -384,37 +394,43 @@ app.post("/management/change-password", async (req, res) => {
 
 
 app.post("/admin/create_account", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, phonenumber, password } = req.body;
 
-  if (!username || !password) {
+  if (!username || !email || !phonenumber || !password) {
     return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
   try {
-    db.query("SELECT * FROM admins WHERE username = ?", [username], async (err, result) => {
+    // Check if username or email already exists
+    db.query("SELECT * FROM admins WHERE username = ? OR email = ?", [username, email], async (err, result) => {
       if (err) {
         console.error("Database error:", err);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
       }
 
       if (result.length > 0) {
-        return res.status(400).json({ success: false, message: "Username already taken" });
+        return res.status(400).json({ success: false, message: "Username or email already taken" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      db.query("INSERT INTO admins (username, password) VALUES (?, ?)", [username, hashedPassword], (err) => {
-        if (err) {
-          console.error("Insert error:", err);
-          return res.status(500).json({ success: false, message: "Failed to create admin" });
+      db.query(
+        "INSERT INTO admins (username, email, phonenumber, password) VALUES (?, ?, ?, ?)",
+        [username, email, phonenumber, hashedPassword],
+        (err) => {
+          if (err) {
+            console.error("Insert error:", err);
+            return res.status(500).json({ success: false, message: "Failed to create admin" });
+          }
+          res.status(201).json({ success: true, message: "Admin account created successfully" });
         }
-        res.status(201).json({ success: true, message: "Admin account created successfully" });
-      });
+      );
     });
   } catch (error) {
     console.error("Error creating admin:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
+
 
 
 app.post("/admin/change-password", async (req, res) => {
@@ -454,6 +470,16 @@ app.post("/admin/change-password", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
+
+
+
+
+console.log("Current Server Time:", new Date().toLocaleString());
+
+
+
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
