@@ -145,7 +145,7 @@ app.delete("/delete/:customer_id", (req, res) => {
 });
 
 
-app.post("/approve_payment", async (req, res) => {
+ app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
   const { customer_id, start_date, end_date, amount } = req.body;
 
@@ -158,11 +158,16 @@ app.post("/approve_payment", async (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // ✅ Fix: Adjust the dates to the local timezone before saving them
-      const fixedStartDate = new Date(new Date(start_date).setHours(0, 0, 0, 0)); // Start date at midnight
-      const fixedEndDate = new Date(new Date(end_date).setHours(23, 59, 59, 999)); // End date at 11:59:59 PM
+      // Force UTC conversion to avoid timezone issues
+      const fixedStartDate = new Date(start_date);
+      const fixedEndDate = new Date(end_date);
 
-      const durationInDays = Math.ceil((fixedEndDate - fixedStartDate) / (1000 * 60 * 60 * 24));
+      // Convert both dates to UTC strings to avoid timezone shifts
+      const startDateUTC = new Date(Date.UTC(fixedStartDate.getUTCFullYear(), fixedStartDate.getUTCMonth(), fixedStartDate.getUTCDate()));
+      const endDateUTC = new Date(Date.UTC(fixedEndDate.getUTCFullYear(), fixedEndDate.getUTCMonth(), fixedEndDate.getUTCDate(), 23, 59, 59, 999));
+
+      // Duration calculation based on UTC dates
+      const durationInDays = Math.ceil((endDateUTC - startDateUTC) / (1000 * 60 * 60 * 24));
       const durationInMonths = durationInDays / 30;
       const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
 
@@ -170,7 +175,7 @@ app.post("/approve_payment", async (req, res) => {
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, fixedStartDate.toISOString().split("T")[0], fixedEndDate.toISOString().split("T")[0]], (err) => {
+      db.query(insertPayment, [customer_id, totalAmount, startDateUTC.toISOString().split("T")[0], endDateUTC.toISOString().split("T")[0]], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
         const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
@@ -186,6 +191,7 @@ app.post("/approve_payment", async (req, res) => {
     res.status(500).json({ message: "Unexpected server error", error });
   }
 });
+
 
 
 
