@@ -146,9 +146,6 @@ app.delete("/delete/:customer_id", (req, res) => {
 
 
 
-
-
-
 app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
 
@@ -164,12 +161,9 @@ app.post("/approve_payment", async (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // Convert start_date and end_date to Date objects
-      const startDate = new Date(start_date);
-      const endDate = new Date(end_date);
-
-      // Ensure the end date ends at 23:59:59.999 (end of the day)
-      endDate.setHours(23, 59, 59, 999);
+      // Convert start_date and end_date to Date objects (in UTC)
+      const startDate = new Date(start_date + "T00:00:00Z");  // Ensure this is in UTC (midnight of start date)
+      const endDate = new Date(end_date + "T23:59:59Z");      // Ensure this is in UTC (end of the end date)
 
       // Calculate the duration in days
       const durationInDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
@@ -202,6 +196,11 @@ app.post("/approve_payment", async (req, res) => {
   }
 });
 
+
+
+
+    
+   
   
 
 
