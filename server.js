@@ -148,6 +148,8 @@ app.delete("/delete/:customer_id", (req, res) => {
 app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
   const { customer_id, start_date, end_date, amount } = req.body;
+  const formattedStartDate = new Date(start_date).toISOString().split("T")[0];
+        const formattedEndDate = new Date(end_date).toISOString().split("T")[0];
 
   try {
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
