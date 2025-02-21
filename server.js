@@ -158,9 +158,9 @@ app.delete("/delete/:customer_id", (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // Force UTC conversion to avoid timezone issues
-      const fixedStartDate = new Date(start_date);
-      const fixedEndDate = new Date(end_date);
+      const fixedStartDate = new Date(start_date).toLocaleDateString("en-CA"); // YYYY-MM-DD
+const fixedEndDate = new Date(end_date).toLocaleDateString("en-CA"); // YYYY-MM-DD
+
 
       // Convert both dates to UTC strings to avoid timezone shifts
       const startDateUTC = new Date(Date.UTC(fixedStartDate.getUTCFullYear(), fixedStartDate.getUTCMonth(), fixedStartDate.getUTCDate()));
