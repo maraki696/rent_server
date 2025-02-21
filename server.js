@@ -147,36 +147,48 @@ app.delete("/delete/:customer_id", (req, res) => {
 
 
 
-app.post("/approve_payment",async (req, res) => {
- await checkAndUpdatePaymentStatus();
-  const { customer_id, start_date, end_date, amount } = req.body;  
-  const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
+app.post("/approve_payment", async (req, res) => {
+    await checkAndUpdatePaymentStatus();
+    const { customer_id, start_date, end_date, amount } = req.body;
   
-  db.query(amountQuery, [customer_id], (err, result) => {
-    if (err) return res.status(500).json({ message: "Database error", error: err });
-    
-    if (result.length === 0) return res.status(404).json({ message: "Customer not found" });
-    
-    const monthlyAmount = result[0].paymentamountpermonth;
-    const durationInMonths = (new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24 * 30);
-    const totalAmount = amount || Math.round(monthlyAmount * durationInMonths); 
-    
-    const insertPayment = "INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status) VALUES (?, ?, NOW(), ?, ?, 'Paid')";
-    db.query(insertPayment, [customer_id, totalAmount, start_date, end_date], (err) => {
-      if (err) return res.status(500).json({ message: "Database error", error: err });
-      
-      const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
-      db.query(updateCustomerStatus, [customer_id], (err) => {
+    try {
+      const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
+      db.query(amountQuery, [customer_id], (err, result) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
-        
-        res.json({ success: "Payment approved successfully" });
-
-
-        
+  
+        if (result.length === 0) return res.status(404).json({ message: "Customer not found" });
+  
+        const monthlyAmount = result[0].paymentamountpermonth;
+  
+        // ✅ Fix: Convert to correct format (avoiding timezone shift)
+        const fixedStartDate = new Date(start_date).toISOString().split("T")[0]; // YYYY-MM-DD
+        const fixedEndDate = new Date(end_date).toISOString().split("T")[0]; // YYYY-MM-DD
+  
+        const durationInDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24));
+        const durationInMonths = durationInDays / 30;
+        const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
+  
+        const insertPayment = `
+          INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
+          VALUES (?, ?, NOW(), ?, ?, 'Paid')
+        `;
+        db.query(insertPayment, [customer_id, totalAmount, fixedStartDate, fixedEndDate], (err) => {
+          if (err) return res.status(500).json({ message: "Database error", error: err });
+  
+          const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
+          db.query(updateCustomerStatus, [customer_id], (err) => {
+            if (err) return res.status(500).json({ message: "Database error", error: err });
+  
+            res.json({ success: "Payment approved successfully", totalAmount });
+          });
+        });
       });
-    });
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      res.status(500).json({ message: "Unexpected server error", error });
+    }
   });
-});
+  
 
 
 
