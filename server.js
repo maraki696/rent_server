@@ -178,7 +178,7 @@ app.post("/approve_payment", async (req, res) => {
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, startDate.toISOString().split("T")[0], endDate.toISOString().split("T")[0]], (err) => {
+      db.query(insertPayment, [customer_id, totalAmount, formattedStartDate, formattedEndDate, (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
         // Update customer payment status
