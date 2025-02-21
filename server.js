@@ -145,11 +145,17 @@ app.delete("/delete/:customer_id", (req, res) => {
 });
 
 
- app.post("/approve_payment", async (req, res) => {
+
+
+
+
+app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
+
   const { customer_id, start_date, end_date, amount } = req.body;
 
   try {
+    // Get the monthly payment amount for the customer
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
     db.query(amountQuery, [customer_id], (err, result) => {
       if (err) return res.status(500).json({ message: "Database error", error: err });
@@ -158,30 +164,34 @@ app.delete("/delete/:customer_id", (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      const fixedStartDate = new Date(start_date).toLocaleDateString("en-CA"); // YYYY-MM-DD
-const fixedEndDate = new Date(end_date).toLocaleDateString("en-CA"); // YYYY-MM-DD
+      // Convert start_date and end_date to Date objects
+      const startDate = new Date(start_date);
+      const endDate = new Date(end_date);
 
+      // Ensure the end date ends at 23:59:59.999 (end of the day)
+      endDate.setHours(23, 59, 59, 999);
 
-      // Convert both dates to UTC strings to avoid timezone shifts
-      const startDateUTC = new Date(Date.UTC(fixedStartDate.getUTCFullYear(), fixedStartDate.getUTCMonth(), fixedStartDate.getUTCDate()));
-      const endDateUTC = new Date(Date.UTC(fixedEndDate.getUTCFullYear(), fixedEndDate.getUTCMonth(), fixedEndDate.getUTCDate(), 23, 59, 59, 999));
+      // Calculate the duration in days
+      const durationInDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      const durationInMonths = durationInDays / 30; // Approximate months
 
-      // Duration calculation based on UTC dates
-      const durationInDays = Math.ceil((endDateUTC - startDateUTC) / (1000 * 60 * 60 * 24));
-      const durationInMonths = durationInDays / 30;
+      // Calculate the total payment amount based on the duration
       const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
 
+      // Prepare the query to insert the payment record
       const insertPayment = `
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, startDateUTC.toISOString().split("T")[0], endDateUTC.toISOString().split("T")[0]], (err) => {
+      db.query(insertPayment, [customer_id, totalAmount, startDate.toISOString().split("T")[0], endDate.toISOString().split("T")[0]], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
+        // Update the customer's payment status
         const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
         db.query(updateCustomerStatus, [customer_id], (err) => {
           if (err) return res.status(500).json({ message: "Database error", error: err });
 
+          // Respond with a success message
           res.json({ success: "Payment approved successfully", totalAmount });
         });
       });
@@ -191,9 +201,6 @@ const fixedEndDate = new Date(end_date).toLocaleDateString("en-CA"); // YYYY-MM-
     res.status(500).json({ message: "Unexpected server error", error });
   }
 });
-
-
-
 
   
 
