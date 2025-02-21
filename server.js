@@ -145,14 +145,11 @@ app.delete("/delete/:customer_id", (req, res) => {
 });
 
 
-
 app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
-
   const { customer_id, start_date, end_date, amount } = req.body;
 
   try {
-    // Get the monthly payment amount for the customer
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
     db.query(amountQuery, [customer_id], (err, result) => {
       if (err) return res.status(500).json({ message: "Database error", error: err });
@@ -161,18 +158,20 @@ app.post("/approve_payment", async (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // Convert start_date and end_date to Date objects (in UTC)
-      const startDate = new Date(start_date + "T00:00:00Z");  // Ensure this is in UTC (midnight of start date)
-      const endDate = new Date(end_date + "T23:59:59Z");      // Ensure this is in UTC (end of the end date)
+      // Directly parse start_date and end_date as YYYY-MM-DD format from the request
+      const startDate = new Date(start_date); // Automatically handles string -> Date conversion
+      const endDate = new Date(end_date); // Automatically handles string -> Date conversion
 
-      // Calculate the duration in days
+      // Ensure endDate is at 23:59:59 for accurate calculation
+      endDate.setHours(23, 59, 59, 999);
+
+      // Duration calculation in days
       const durationInDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-      const durationInMonths = durationInDays / 30; // Approximate months
+      const durationInMonths = durationInDays / 30; // Approximate number of months
 
-      // Calculate the total payment amount based on the duration
       const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
 
-      // Prepare the query to insert the payment record
+      // Insert payment into the database with formatted dates
       const insertPayment = `
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
@@ -180,12 +179,11 @@ app.post("/approve_payment", async (req, res) => {
       db.query(insertPayment, [customer_id, totalAmount, startDate.toISOString().split("T")[0], endDate.toISOString().split("T")[0]], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
-        // Update the customer's payment status
+        // Update customer payment status
         const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
         db.query(updateCustomerStatus, [customer_id], (err) => {
           if (err) return res.status(500).json({ message: "Database error", error: err });
 
-          // Respond with a success message
           res.json({ success: "Payment approved successfully", totalAmount });
         });
       });
@@ -195,6 +193,7 @@ app.post("/approve_payment", async (req, res) => {
     res.status(500).json({ message: "Unexpected server error", error });
   }
 });
+
 
 
 
