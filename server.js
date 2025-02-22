@@ -161,19 +161,17 @@ app.post("/approve_payment", async (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // ✅ Fix: Convert to correct format (avoiding timezone shift)
-      const fixedStartDate = new Date(start_date).toISOString().split("T")[0]; // YYYY-MM-DD
-      const fixedEndDate = new Date(end_date).toISOString().split("T")[0]; // YYYY-MM-DD
+    const fixedStartDate = new Date(start_date + "T00:00:00").toISOString().split("T")[0];
+const fixedEndDate = new Date(end_date + "T00:00:00").toISOString().split("T")[0];
 
-      const durationInDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24));
-      const durationInMonths = durationInDays / 30;
-      const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
+
+   
 
       const insertPayment = `
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, fixedStartDate, fixedEndDate], (err) => {
+      db.query(insertPayment, [customer_id, amount, fixedStartDate, fixedEndDate], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
         const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
