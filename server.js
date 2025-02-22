@@ -151,8 +151,6 @@ app.delete("/delete/:customer_id", (req, res) => {
 app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
   const { customer_id, start_date, end_date, amount } = req.body;
-  const formattedStartDate = new Date(start_date).toISOString().split("T")[0];
-        const formattedEndDate = new Date(end_date).toISOString().split("T")[0];
 
   try {
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
@@ -163,28 +161,21 @@ app.post("/approve_payment", async (req, res) => {
 
       const monthlyAmount = result[0].paymentamountpermonth;
 
-      // Directly parse start_date and end_date as YYYY-MM-DD format from the request
-      const startDate = new Date(start_date); // Automatically handles string -> Date conversion
-      const endDate = new Date(end_date); // Automatically handles string -> Date conversion
+      // ✅ Fix: Convert to correct format (avoiding timezone shift)
+      const fixedStartDate = new Date(start_date).toISOString().split("T")[0]; // YYYY-MM-DD
+      const fixedEndDate = new Date(end_date).toISOString().split("T")[0]; // YYYY-MM-DD
 
-      // Ensure endDate is at 23:59:59 for accurate calculation
-      endDate.setHours(23, 59, 59, 999);
-
-      // Duration calculation in days
-      const durationInDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-      const durationInMonths = durationInDays / 30; // Approximate number of months
-
+      const durationInDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24));
+      const durationInMonths = durationInDays / 30;
       const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
 
-      // Insert payment into the database with formatted dates
       const insertPayment = `
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, formattedStartDate, formattedEndDate], (err) => {
+      db.query(insertPayment, [customer_id, totalAmount, fixedStartDate, fixedEndDate], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
-        // Update customer payment status
         const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
         db.query(updateCustomerStatus, [customer_id], (err) => {
           if (err) return res.status(500).json({ message: "Database error", error: err });
