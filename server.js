@@ -598,15 +598,13 @@ const sendEmailToAdmins = async (adminEmails, emailBody, customers) => {
 };
 
 
-app.get("/api/run-cron-job", async (req, res) => {
-  try {
-    await checkCustomersDueTomorrow();
-    res.status(200).send("Cron job executed successfully!");
-  } catch (err) {
-    console.error("❌ Cron job execution failed:", err);
-    res.status(500).send("Cron job failed.");
-  }
+
+ app.get("/api/run-cron-job", async (req, res) => {
+  res.status(200).send("Cron job triggered successfully!"); // ✅ Respond immediately
+  await checkCustomersDueTomorrow(); // Run in background
 });
+
+
 
 
 
