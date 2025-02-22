@@ -517,13 +517,13 @@ const checkCustomersDueTomorrow = async () => {
     );
 
     if (customersToNotify.length === 0) {
-      console.log("✅ No new customers to notify today.");
+      console.log("No new customers to notify today.");
       return;
     }
 
     const [admins] = await db.promise().query("SELECT email FROM admins");
     if (admins.length === 0) {
-      console.log("⚠️ No admin emails found.");
+      console.log("No admin emails found.");
       return;
     }
 
@@ -535,11 +535,11 @@ const checkCustomersDueTomorrow = async () => {
 
     await sendEmailToAdmins(adminEmails, emailBody, customersToNotify);
   } catch (err) {
-    console.error("❌ Error in checkCustomersDueTomorrow:", err);
+    console.error("Error in checkCustomersDueTomorrow:", err);
   }
 };
 
-// ✅ Email sender function
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -563,13 +563,13 @@ const sendEmailToAdmins = async (adminEmails, emailBody, customers) => {
     const values = customers.map((c) => `(${c.customer_id}, CURDATE())`).join(",");
     await db.promise().query(`INSERT INTO email_logs (customer_id, email_sent_date) VALUES ${values}`);
 
-    console.log("✅ Email logs updated successfully.");
+    console.log("Email logs updated successfully.");
   } catch (err) {
-    console.error("❌ Error sending admin email:", err);
+    console.error("Error sending admin email:", err);
   }
 };
 
-// ✅ Create an API endpoint for cron-job.org
+
 app.get("/api/run-cron-job", async (req, res) => {
   try {
     await checkCustomersDueTomorrow();
