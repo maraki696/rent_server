@@ -178,7 +178,7 @@ app.post("/approve_payment", async (req, res) => {
         INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
         VALUES (?, ?, NOW(), ?, ?, 'Paid')
       `;
-      db.query(insertPayment, [customer_id, totalAmount, formattedStartDate, formattedEndDate, (err) => {
+      db.query(insertPayment, [customer_id, totalAmount, formattedStartDate, formattedEndDate], (err) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
 
         // Update customer payment status
@@ -528,7 +528,7 @@ const checkCustomersDueTomorrow = async () => {
       return;
     }
 
-    console.log(`📌 Found ${customers.length} customers due tomorrow.`);
+    console.log(` Found ${customers.length} customers due tomorrow.`);
 
     const customerIds = customers.map((c) => c.customer_id);
     if (customerIds.length === 0) return;
