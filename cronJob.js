@@ -13,13 +13,13 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
   port: process.env.DB_PORT || 53032,
   waitForConnections: true,
-  connectionLimit: 10, // Manage multiple queries efficiently
+  connectionLimit: 10, 
   queueLimit: 0,
 });
 
-console.log(`[${new Date().toISOString()}] Cron Job: Connected to Database.`);
+console.log(`[${new Date().toISOString()}] Cron Job::::: Connected to Database.`);
 
-// Function to check customers due tomorrow
+
 const checkCustomersDueTomorrow = async () => {
   try {
     console.log(`[${new Date().toISOString()}] Checking customers due tomorrow...`);
@@ -76,7 +76,6 @@ const checkCustomersDueTomorrow = async () => {
   }
 };
 
-// Email sender function
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -85,7 +84,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Function to send emails to admins
 const sendEmailToAdmins = async (adminEmails, emailBody, customers) => {
   try {
     const mailOptions = {
@@ -106,27 +104,27 @@ const sendEmailToAdmins = async (adminEmails, emailBody, customers) => {
     console.error("❌ Error sending admin email:", err);
   }
 };
-
-// Run the job immediately on startup
-checkCustomersDueTomorrow();
-console.log(`[${new Date().toISOString()}] Cron job initialized.`);
-
-// Schedule the cron job to run daily at 2 AM
 cron.schedule("0 2 * * *", () => {
   console.log(`[${new Date().toISOString()}] Running cron job...`);
   checkCustomersDueTomorrow();
 });
 
+// Run the job immediately on startup
+// checkCustomersDueTomorrow();
+// console.log(`[${new Date().toISOString()}] Cron job initialized.`);
+
+// Schedule the cron job to run daily at 2 AM
+
 // Keep the server alive on Render to prevent shutdown
-const keepServerAlive = () => {
-  setInterval(async () => {
-    try {
-      console.log(`[${new Date().toISOString()}] Keeping server alive...`);
-      await axios.get(`${process.env.SERVER_URL}/health-check`);
-    } catch (err) {
-      console.log("⚠️ Server keep-alive request failed.");
-    }
-  }, 1000 * 60 * 15); // Ping every 15 minutes
-};
+// const keepServerAlive = () => {
+//   setInterval(async () => {
+//     try {
+//       console.log(`[${new Date().toISOString()}] Keeping server alive...`);
+//       await axios.get(`${process.env.SERVER_URL}/health-check`);
+//     } catch (err) {
+//       console.log("⚠️ Server keep-alive request failed.");
+//     }
+//   }, 1000 * 60 * 15); // Ping every 15 minutes
+// };
 
 keepServerAlive();
