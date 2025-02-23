@@ -153,7 +153,6 @@ app.post("/approve_payment", async (req, res) => {
   const { customer_id, start_date, end_date, amount } = req.body;
 
   try {
-    // Fetch the customer's monthly payment amount
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
     const [result] = await db.promise().query(amountQuery, [customer_id]);
 
@@ -164,8 +163,8 @@ app.post("/approve_payment", async (req, res) => {
     const monthlyAmount = result[0].paymentamountpremonth;
 
     // Fix date formatting to ensure proper saving
-    const fixedStartDate = new Date(start_date).toISOString().split("T")[0];
-    const fixedEndDate = new Date(end_date).toISOString().split("T")[0];
+    const fixedStartDate = new Date(start_date + 'T00:00:00Z'); // Set to UTC
+const fixedEndDate = new Date(end_date + 'T00:00:00Z'); // Set to UTC
 
     // Use provided amount or calculate based on the duration
     const durationInDays = Math.ceil((new Date(fixedEndDate) - new Date(fixedStartDate)) / (1000 * 60 * 60 * 24));
