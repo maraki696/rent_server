@@ -163,8 +163,8 @@ app.post("/approve_payment", async (req, res) => {
     const monthlyAmount = result[0].paymentamountpremonth;
 
     // Fix date formatting to ensure proper saving
-    const fixedStartDate = new Date(start_date + 'T00:00:00Z'); // Set to UTC
-const fixedEndDate = new Date(end_date + 'T00:00:00Z'); // Set to UTC
+    const fixedStartDate = new Date(start_date); 
+const fixedEndDate = new Date(end_date);
 
     // Use provided amount or calculate based on the duration
     const durationInDays = Math.ceil((new Date(fixedEndDate) - new Date(fixedStartDate)) / (1000 * 60 * 60 * 24));
