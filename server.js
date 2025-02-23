@@ -154,7 +154,7 @@ app.post("/approve_payment", async (req, res) => {
 
   try {
     // Fetch the customer's monthly payment amount
-    const amountQuery = "SELECT paymentamountpremonth FROM customers WHERE id = ?";
+    const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE id = ?";
     const [result] = await db.promise().query(amountQuery, [customer_id]);
 
     if (result.length === 0) {
