@@ -174,13 +174,13 @@ app.post("/approve_payment", async (req, res) => {
 
     // Insert payment record into the payments table
     const insertPayment = `
-      INSERT INTO payments (customerid, amount, paymentdate, startdate, enddate, payment_status)
+      INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
       VALUES (?, ?, NOW(), ?, ?, 'Paid')
     `;
     await db.promise().query(insertPayment, [customer_id, totalAmount, fixedStartDate, fixedEndDate]);
 
     // Update customer's payment status to "Paid"
-    const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE id = ?";
+    const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
     await db.promise().query(updateCustomerStatus, [customer_id]);
 
     res.json({ success: "Payment approved successfully", totalAmount });
