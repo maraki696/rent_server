@@ -149,50 +149,41 @@ app.delete("/delete/:customer_id", (req, res) => {
 
 
 app.post("/approve_payment", async (req, res) => {
-  await checkAndUpdatePaymentStatus();
   const { customer_id, start_date, end_date, amount } = req.body;
 
   try {
     const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
-    const [result] = await db.promise().query(amountQuery, [customer_id]);
+    db.query(amountQuery, [customer_id], (err, result) => {
+      if (err) return res.status(500).json({ message: "Database error", error: err });
 
-    if (result.length === 0) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
+      if (result.length === 0) return res.status(404).json({ message: "Customer not found" });
 
-    const monthlyAmount = result[0].paymentamountpremonth;
+      const monthlyAmount = result[0].paymentamountpermonth;
 
-    // Fix date formatting to ensure proper saving
-    const fixedStartDate = new Date(start_date); 
-const fixedEndDate = new Date(end_date);
+      const durationInDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24));
+      const durationInMonths = durationInDays / 30;
+      const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
 
-    // Use provided amount or calculate based on the duration
-    const durationInDays = Math.ceil((new Date(fixedEndDate) - new Date(fixedStartDate)) / (1000 * 60 * 60 * 24));
-    const durationInMonths = durationInDays / 30;
-    const totalAmount = amount || Math.round(monthlyAmount * durationInMonths);
+      const insertPayment = `
+        INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
+        VALUES (?, ?, NOW(), ?, ?, 'Paid')
+      `;
+      db.query(insertPayment, [customer_id, totalAmount, start_date, end_date], (err) => {
+        if (err) return res.status(500).json({ message: "Database error", error: err });
 
-    // Insert payment record into the payments table
-    const insertPayment = `
-      INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status)
-      VALUES (?, ?, NOW(), ?, ?, 'Paid')
-    `;
-    await db.promise().query(insertPayment, [customer_id, totalAmount, fixedStartDate, fixedEndDate]);
+        const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
+        db.query(updateCustomerStatus, [customer_id], (err) => {
+          if (err) return res.status(500).json({ message: "Database error", error: err });
 
-    // Update customer's payment status to "Paid"
-    const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
-    await db.promise().query(updateCustomerStatus, [customer_id]);
-
-    res.json({ success: "Payment approved successfully", totalAmount });
-
+          res.json({ success: "Payment approved successfully", totalAmount });
+        });
+      });
+    });
   } catch (error) {
     console.error("Unexpected error:", error);
     res.status(500).json({ message: "Unexpected server error", error });
   }
 });
-
-
-
-
 
 
     
