@@ -152,31 +152,35 @@ app.delete("/delete/:customer_id", (req, res) => {
 
 app.post("/approve_payment", async (req, res) => {
   await checkAndUpdatePaymentStatus();
-  const { customer_id, start_date, end_date, amount } = req.body;
-
-  const amountQuery = "SELECT paymentamountpermonth FROM customers WHERE customer_id = ?";
   
-  db.query(amountQuery, [customer_id], (err, result) => {
-    if (err) return res.status(500).json({ message: "Database error", error: err });
+  const sql = "INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status) VALUES (?, ?, NOW(), ?, ?, 'Paid')";
+  const sql2 = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
+  
+  const values = [
+    req.body.customer_id, 
+    req.body.amount, 
+    req.body.start_date, 
+    req.body.end_date
+  ];
 
-    if (result.length === 0) return res.status(404).json({ message: "Customer not found" });
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error inserting payment:", err);
+      return res.status(500).json({ message: "Database error", error: err });
+    }
 
-    const monthlyAmount = result[0].paymentamountpermonth;
-    const totalAmount = amount || monthlyAmount; 
+    // After inserting payment, update customer payment status
+    db.query(sql2, [req.body.customer_id], (err) => {
+      if (err) {
+        console.error("Error updating customer status:", err);
+        return res.status(500).json({ message: "Database error", error: err });
+      }
 
-    const insertPayment = "INSERT INTO payments (customer_id, amount,  startdate, enddate, payment_status) VALUES (?, ?, ?, ?, 'Paid')";
-    db.query(insertPayment, [customer_id, totalAmount, start_date, end_date], (err) => {
-      if (err) return res.status(500).json({ message: "Database error", error: err });
-
-      const updateCustomerStatus = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
-      db.query(updateCustomerStatus, [customer_id], (err) => {
-        if (err) return res.status(500).json({ message: "Database error", error: err });
-
-        res.json({ success: "Payment approved successfully" });
-      });
+      return res.status(201).json({ success: "Approved Successfully" });
     });
   });
 });
+
 
     
    
