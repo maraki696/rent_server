@@ -164,7 +164,7 @@ app.post("/approve_payment", async (req, res) => {
     const monthlyAmount = result[0].paymentamountpermonth;
     const totalAmount = amount || monthlyAmount; 
 
-    const insertPayment = "INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status) VALUES (?, ?, NOW(), ?, ?, 'Paid')";
+    const insertPayment = "INSERT INTO payments (customer_id, amount,  startdate, enddate, payment_status) VALUES (?, ?, ?, ?, 'Paid')";
     db.query(insertPayment, [customer_id, totalAmount, start_date, end_date], (err) => {
       if (err) return res.status(500).json({ message: "Database error", error: err });
 
