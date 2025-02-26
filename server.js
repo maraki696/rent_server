@@ -407,9 +407,9 @@ app.post("/management/change-password", async (req, res) => {
 
 
 app.post("/admin/create_account", async (req, res) => {
-  const { username, email, phonenumber, password } = req.body;
+  const { username, email,  password } = req.body;
 
-  if (!username || !email || !phonenumber || !password) {
+  if (!username || !email ||  !password) {
     return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
@@ -427,8 +427,8 @@ app.post("/admin/create_account", async (req, res) => {
 
       const hashedPassword = await bcrypt.hash(password, 10);
       db.query(
-        "INSERT INTO admins (username, email, phonenumber, password) VALUES (?, ?, ?, ?)",
-        [username, email, phonenumber, hashedPassword],
+        "INSERT INTO admins (username, email,  password) VALUES (?, ?, ?)",
+        [username, email,  hashedPassword],
         (err) => {
           if (err) {
             console.error("Insert error:", err);
@@ -443,9 +443,6 @@ app.post("/admin/create_account", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
-
-
-
 app.post("/admin/change-password", async (req, res) => {
   const { username, currentPassword, newPassword } = req.body;
 
