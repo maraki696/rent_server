@@ -256,34 +256,28 @@ app.get("/api/payments",async (req, res) => {
 
 const checkAndUpdatePaymentStatus = () => {
   const query = `
-      SELECT c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth, 
-             MAX(p.enddate) AS last_payment_enddate
-      FROM customers c
-      LEFT JOIN payments p ON c.customer_id = p.customer_id
-      WHERE c.payment_status = 'Paid'
-      GROUP BY c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth
-      HAVING last_payment_enddate IS NULL OR last_payment_enddate < CURDATE();
+      SELECT customer_id 
+      FROM customers
+      WHERE leaseexpiredate IS NOT NULL AND leaseexpiredate < CURDATE();
   `;
 
   db.query(query, (err, results) => {
       if (err) {
-          console.error("Error fetching unpaid customers:", err);
+          console.error("Error fetching expired leases:", err);
           return;
       }
 
       if (results.length === 0) {
-         
           return;
       }
 
       results.forEach((customer) => {
-          const updateQuery = "UPDATE customers SET payment_status = 'Unpaid' WHERE customer_id = ?";
+          const updateQuery = "UPDATE customers SET payment_status = 'Unpaid' WHERE customer_id = ? AND payment_status != 'Unpaid'";
           db.query(updateQuery, [customer.customer_id], (err) => {
               if (err) {
                   console.error("Error updating payment status:", err);
                   return;
               }
-             
           });
       });
   });
@@ -294,20 +288,21 @@ const checkAndUpdatePaymentStatus = () => {
 
 
 
-app.get("/unpaid_customers",async(req, res) => {
- await checkAndUpdatePaymentStatus();
+
+
+app.get("/unpaid_customers", async (req, res) => {
+  await checkAndUpdatePaymentStatus();
+  
   const query = `
-    SELECT 
-        c.customer_id, 
-        c.firstname, 
-        c.lastname, 
-        c.paymentamountpermonth,
-        IFNULL(DATEDIFF(CURDATE(), MAX(p.enddate)), 0) AS days_unpaid
-    FROM customers c
-    LEFT JOIN payments p ON c.customer_id = p.customer_id
-    WHERE c.payment_status = 'Unpaid'
-    GROUP BY c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth
-    ORDER BY days_unpaid DESC;
+      SELECT 
+          c.customer_id, 
+          c.firstname, 
+          c.lastname, 
+          c.paymentamountpermonth,
+          IFNULL(DATEDIFF(CURDATE(), c.leaseexpiredate), 0) AS days_unpaid
+      FROM customers c
+      WHERE c.payment_status = 'Unpaid' AND c.leaseexpiredate < CURDATE()
+      ORDER BY days_unpaid DESC;
   `;
 
   db.query(query, (err, results) => {
@@ -315,7 +310,7 @@ app.get("/unpaid_customers",async(req, res) => {
           console.error("Error fetching unpaid customers:", err);
           return res.status(500).json({ error: "Internal Server Error" });
       }
-    
+      
       res.json(results);
   });
 });
@@ -504,19 +499,17 @@ app.post("/admin/change-password", async (req, res) => {
 console.log("Current Server Time:", new Date().toLocaleString());
 
 
-// ✅ Function to check customers due tomorrow
 const checkCustomersDueTomorrow = async () => {
   try {
     console.log(`[${new Date().toISOString()}] Checking customers due tomorrow...`);
 
     const [customers] = await db.promise().query(`
       SELECT c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth, 
-             p.enddate AS last_payment_enddate
+             c.leaseexpiredate AS last_lease_expiredate
       FROM customers c
-      LEFT JOIN payments p ON c.customer_id = p.customer_id
       WHERE c.payment_status = 'Paid'
-        AND DATE(p.enddate) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-      ORDER BY p.enddate DESC LIMIT 1;
+        AND DATE(c.leaseexpiredate) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+      ORDER BY c.leaseexpiredate DESC LIMIT 1;
     `);
 
     if (customers.length === 0) {
@@ -524,7 +517,7 @@ const checkCustomersDueTomorrow = async () => {
       return;
     }
 
-    console.log(` Found ${customers.length} customers due tomorrow.`);
+    console.log(`📌 Found ${customers.length} customers due tomorrow.`);
 
     const customerIds = customers.map((c) => c.customer_id);
     if (customerIds.length === 0) return;
@@ -552,7 +545,7 @@ const checkCustomersDueTomorrow = async () => {
     }
 
     const adminEmails = admins.map((a) => a.email);
-    let emailBody = "The following customers have 1 day left before rent is due:\n\n";
+    let emailBody = "The following customers have 1 day left before their lease expires:\n\n";
     customersToNotify.forEach((c) => {
       emailBody += `- ${c.firstname} ${c.lastname} | Amount Due: ${c.paymentamountpermonth} ETB\n`;
     });
