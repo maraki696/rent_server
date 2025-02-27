@@ -150,33 +150,50 @@ app.delete("/delete/:customer_id", (req, res) => {
 
 
 
-app.post("/approve_payment", async (req, res) => {
-  await checkAndUpdatePaymentStatus();
-  
-  const sql = "INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status) VALUES (?, ?, NOW(), ?, ?, 'Paid')";
-  const sql2 = "UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?";
-  
-  const values = [
-    req.body.customer_id, 
-    req.body.amount, 
-    req.body.start_date, 
-    req.body.end_date
-  ];
 
-  db.query(sql, values, (err, result) => {
+
+app.post("/approve_payment", async (req, res) => {
+  await checkAndUpdatePaymentStatus(); 
+  
+  const insertPaymentSQL = `
+    INSERT INTO payments (customer_id, amount, paymentdate, startdate, enddate, payment_status) 
+    VALUES (?, ?, NOW(), ?, ?, 'Paid')
+  `;
+
+  const updatePaymentStatusSQL = `
+    UPDATE customers SET payment_status = 'Paid' WHERE customer_id = ?
+  `;
+
+  const updateLeaseExpireDateSQL = `
+     UPDATE customers SET leaseexpiredate = STR_TO_DATE(?, '%Y-%m-%d') WHERE customer_id = ?
+
+  `;
+
+  const { customer_id, start_date, end_date, amount } = req.body;
+
+  // Insert payment record
+  db.query(insertPaymentSQL, [customer_id, amount, start_date, end_date], (err, result) => {
     if (err) {
       console.error("Error inserting payment:", err);
       return res.status(500).json({ message: "Database error", error: err });
     }
 
-    // After inserting payment, update customer payment status
-    db.query(sql2, [req.body.customer_id], (err) => {
+  
+    db.query(updatePaymentStatusSQL, [customer_id], (err) => {
       if (err) {
-        console.error("Error updating customer status:", err);
+        console.error("Error updating payment status:", err);
         return res.status(500).json({ message: "Database error", error: err });
       }
 
-      return res.status(201).json({ success: "Approved Successfully" });
+   
+      db.query(updateLeaseExpireDateSQL, [end_date, customer_id], (err) => {
+        if (err) {
+          console.error("Error updating lease expire date:", err);
+          return res.status(500).json({ message: "Database error", error: err });
+        }
+
+        return res.status(201).json({ success: "Approved Successfully" });
+      });
     });
   });
 });
