@@ -504,12 +504,11 @@ const checkCustomersDueTomorrow = async () => {
     console.log(`[${new Date().toISOString()}] Checking customers due tomorrow...`);
 
     const [customers] = await db.promise().query(`
-      SELECT c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth, 
-             c.leaseexpiredate AS last_lease_expiredate
+      SELECT c.customer_id, c.firstname, c.lastname, c.paymentamountpermonth 
       FROM customers c
       WHERE c.payment_status = 'Paid'
         AND DATE(c.leaseexpiredate) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-      ORDER BY c.leaseexpiredate DESC LIMIT 1;
+      ORDER BY c.leaseexpiredate DESC;
     `);
 
     if (customers.length === 0) {
@@ -519,25 +518,6 @@ const checkCustomersDueTomorrow = async () => {
 
     console.log(`📌 Found ${customers.length} customers due tomorrow.`);
 
-    const customerIds = customers.map((c) => c.customer_id);
-    if (customerIds.length === 0) return;
-
-    const [loggedEmails] = await db.promise().query(`
-      SELECT customer_id FROM email_logs 
-      WHERE email_sent_date = CURDATE() 
-      AND customer_id IN (${customerIds.join(",")});
-    `);
-
-    const alreadyEmailedIds = loggedEmails.map((row) => row.customer_id);
-    const customersToNotify = customers.filter(
-      (c) => !alreadyEmailedIds.includes(c.customer_id)
-    );
-
-    if (customersToNotify.length === 0) {
-      console.log("No new customers to notify today.");
-      return;
-    }
-
     const [admins] = await db.promise().query("SELECT email FROM admins");
     if (admins.length === 0) {
       console.log("No admin emails found.");
@@ -546,11 +526,11 @@ const checkCustomersDueTomorrow = async () => {
 
     const adminEmails = admins.map((a) => a.email);
     let emailBody = "The following customers have 1 day left before their lease expires:\n\n";
-    customersToNotify.forEach((c) => {
+    customers.forEach((c) => {
       emailBody += `- ${c.firstname} ${c.lastname} | Amount Due: ${c.paymentamountpermonth} ETB\n`;
     });
 
-    await sendEmailToAdmins(adminEmails, emailBody, customersToNotify);
+    await sendEmailToAdmins(adminEmails, emailBody);
   } catch (err) {
     console.error("Error in checkCustomersDueTomorrow:", err);
   }
@@ -565,22 +545,17 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmailToAdmins = async (adminEmails, emailBody, customers) => {
+const sendEmailToAdmins = async (adminEmails, emailBody) => {
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: adminEmails.join(","),
-      subject: "Urgent: Customers with 1 Day Left for Rent Payment",
+      subject: "Customers with 1 Day Left for Rent Payment",
       text: emailBody,
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`📩 Email sent to admins: ${info.response}`);
-
-    const values = customers.map((c) => `(${c.customer_id}, CURDATE())`).join(",");
-    await db.promise().query(`INSERT INTO email_logs (customer_id, email_sent_date) VALUES ${values}`);
-
-    console.log("Email logs updated successfully.");
   } catch (err) {
     console.error("Error sending admin email:", err);
   }
