@@ -103,21 +103,20 @@ app.put("/edit_customer/:customer_id", (req, res) => {
   };
 
 
-  const leaseexpiredate = formatDateForMySQL(req.body.leaseexpiredate);
   const rentdate = formatDateForMySQL(req.body.rentdate);
 
   const query = `
     UPDATE customers 
     SET firstname=?, lastname=?, tinnumber=?, phonenumber=?,  
         roomsize_sq_m=?, housenumber=?, paymentamountpermonth=?, paymentamountperyear=?, 
-        rentdate=?, leaseexpiredate=?, floornumber=? 
+        rentdate=?,  floornumber=? 
     WHERE customer_id=?
   `;
 
   const values = [
     req.body.firstname, req.body.lastname, req.body.tinnumber, req.body.phonenumber, 
     req.body.roomsize_sq_m, req.body.housenumber, req.body.paymentamountpermonth, req.body.paymentamountperyear,
-    rentdate, leaseexpiredate, req.body.floornumber, req.params.customer_id
+     req.body.floornumber, req.params.customer_id
   ];
 
   db.query(query, values, (err, result) => {
