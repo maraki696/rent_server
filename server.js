@@ -5,22 +5,14 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const cron = require("node-cron");
-// const axios = require("axios");
 require("dotenv").config();
-
-
-
-
-
-
-
 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(cors());
 const db = mysql.createPool({
-  connectionLimit: 10, // Adjust based on your needs
+  connectionLimit: 10, 
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -35,7 +27,7 @@ db.getConnection((err, connection) => {
     console.error("Error connecting to the database:", err);
   } else {
     console.log("Connected to the database");
-    connection.release(); // Release the connection back to the pool
+    connection.release(); 
   }
 });
 
@@ -567,11 +559,17 @@ const sendEmailToAdmins = async (adminEmails, emailBody) => {
 };
 
 
-
- app.get("/api/run-cron-job", async (req, res) => {
-  res.status(200).send("Cron job triggered successfully!"); // ✅ Respond immediately
-  await checkCustomersDueTomorrow(); // Run in background
+app.get("/api/run-cron-job", async (req, res) => {
+  try {
+    await checkCustomersDueTomorrow();
+    await checkAndUpdatePaymentStatus();
+    res.status(200).send("Cron job triggered successfully!");
+  } catch (error) {
+    console.error("Error running cron job:", error);
+    res.status(500).send("Failed to trigger cron job.");
+  }
 });
+
 
 
 
