@@ -95,7 +95,7 @@ app.get("/get_customer/:customer_id", (req, res) => {
 });
 
 
-app.put("/edit_customer/:customer_id", (req, res) => {
+app.put("/edit/:customer_id", (req, res) => {
   const formatDateForMySQL = (dateString) => {
     return new Date(dateString).toISOString().split("T")[0]; 
   };
