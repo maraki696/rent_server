@@ -111,11 +111,13 @@ app.put("/edit/:customer_id", (req, res) => {
     WHERE customer_id=?
   `;
 
-  const values = [
-    req.body.firstname, req.body.lastname, req.body.tinnumber, req.body.phonenumber, 
-    req.body.roomsize_sq_m, req.body.housenumber, req.body.paymentamountpermonth, req.body.paymentamountperyear,
-     req.body.floornumber, req.params.customer_id
-  ];
+const values = [
+  req.body.firstname, req.body.lastname, req.body.tinnumber, req.body.phonenumber, 
+  req.body.roomsize_sq_m, req.body.housenumber, req.body.paymentamountpermonth, req.body.paymentamountperyear,
+  rentdate, req.body.floornumber, req.params.customer_id 
+];
+
+
 
   db.query(query, values, (err, result) => {
     if (err) {
